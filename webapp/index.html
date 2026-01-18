@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArboVision - Gestion du Patrimoine Arboricole</title>
+
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Leaflet MarkerCluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+            min-height: 100vh;
+            color: #2d3436;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar - Theme foret */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #1e3c2f 0%, #2d5a47 100%);
+            padding: 1.5rem;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.2);
+        }
+
+        .logo {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+            color: #a8e6cf;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            font-size: 1.8rem;
+        }
+
+        .logo-sub {
+            font-size: 0.8rem;
+            color: rgba(168, 230, 207, 0.7);
+            margin-bottom: 2rem;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(168, 230, 207, 0.5);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.875rem 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 0.4rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+        }
+
+        .nav-item:hover {
+            background: rgba(168, 230, 207, 0.15);
+            color: #fff;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            color: #1e3c2f;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(86, 171, 47, 0.4);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+        }
+
+        /* Styled Select */
+        .styled-select {
+            position: relative;
+            margin-top: 0.5rem;
+        }
+
+        .styled-select select {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            padding-right: 2.5rem;
+            background: rgba(168, 230, 207, 0.15);
+            border: 2px solid rgba(168, 230, 207, 0.3);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 0.9rem;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            appearance: none;
+            transition: all 0.3s ease;
+        }
+
+        .styled-select select:hover {
+            border-color: rgba(168, 230, 207, 0.5);
+            background: rgba(168, 230, 207, 0.2);
+        }
+
+        .styled-select select:focus {
+            outline: none;
+            border-color: #a8e6cf;
+            box-shadow: 0 0 0 3px rgba(168, 230, 207, 0.2);
+        }
+
+        .styled-select select option {
+            background: #2d5a47;
+            color: #fff;
+            padding: 10px;
+        }
+
+        .styled-select::after {
+            content: '';
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #a8e6cf;
+            pointer-events: none;
+        }
+
+        .filter-label {
+            font-size: 0.8rem;
+            color: rgba(168, 230, 207, 0.7);
+            margin-bottom: 0.3rem;
+            display: block;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem;
+            background: #f5f7f5;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e3c2f;
+            margin-bottom: 0.3rem;
+        }
+
+        .page-subtitle {
+            color: #6b8f7a;
+            font-size: 0.95rem;
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .kpi-card.green::before { background: linear-gradient(180deg, #56ab2f, #a8e063); }
+        .kpi-card.red::before { background: linear-gradient(180deg, #e74c3c, #c0392b); }
+        .kpi-card.orange::before { background: linear-gradient(180deg, #f39c12, #e67e22); }
+        .kpi-card.blue::before { background: linear-gradient(180deg, #3498db, #2980b9); }
+        .kpi-card.purple::before { background: linear-gradient(180deg, #9b59b6, #8e44ad); }
+
+        .kpi-label {
+            font-size: 0.85rem;
+            color: #6b8f7a;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .kpi-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #1e3c2f;
+        }
+
+        .kpi-card.green .kpi-value { color: #27ae60; }
+        .kpi-card.red .kpi-value { color: #e74c3c; }
+        .kpi-card.orange .kpi-value { color: #f39c12; }
+        .kpi-card.blue .kpi-value { color: #3498db; }
+        .kpi-card.purple .kpi-value { color: #9b59b6; }
+
+        .kpi-change {
+            font-size: 0.8rem;
+            color: #95a5a6;
+            margin-top: 0.3rem;
+        }
+
+        /* Cards */
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #eef2ef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e3c2f;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Controls inline */
+        .inline-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-size: 0.85rem;
+            color: #6b8f7a;
+            font-weight: 500;
+        }
+
+        .control-select {
+            padding: 0.5rem 2rem 0.5rem 0.75rem;
+            background: #f5f7f5;
+            border: 2px solid #d4e5d8;
+            border-radius: 8px;
+            color: #1e3c2f;
+            font-size: 0.85rem;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231e3c2f' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            transition: all 0.2s ease;
+        }
+
+        .control-select:hover {
+            border-color: #56ab2f;
+        }
+
+        .control-select:focus {
+            outline: none;
+            border-color: #56ab2f;
+            box-shadow: 0 0 0 3px rgba(86, 171, 47, 0.15);
+        }
+
+        .control-input {
+            padding: 0.5rem 0.75rem;
+            background: #f5f7f5;
+            border: 2px solid #d4e5d8;
+            border-radius: 8px;
+            color: #1e3c2f;
+            font-size: 0.85rem;
+            width: 100px;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: #56ab2f;
+            box-shadow: 0 0 0 3px rgba(86, 171, 47, 0.15);
+        }
+
+        /* Grid */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1200px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Map */
+        #map {
+            height: 500px;
+            border-radius: 12px;
+            z-index: 1;
+        }
+
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f5f7f5;
+            border-radius: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: #1e3c2f;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+        }
+
+        th {
+            background: #f5f7f5;
+            font-weight: 600;
+            color: #1e3c2f;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #d4e5d8;
+        }
+
+        td {
+            border-bottom: 1px solid #eef2ef;
+            color: #2d3436;
+        }
+
+        tr:hover td {
+            background: #f9fdf9;
+        }
+
+        /* Score Badge */
+        .score-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            height: 36px;
+            padding: 0 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #fff;
+        }
+
+        .score-critical { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .score-high { background: linear-gradient(135deg, #e67e22, #d35400); }
+        .score-medium { background: linear-gradient(135deg, #f39c12, #f1c40f); color: #1e3c2f; }
+        .score-low { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+        .score-normal { background: linear-gradient(135deg, #3498db, #2980b9); }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 8px;
+            background: #eef2ef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-fill.critical { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        .progress-fill.high { background: linear-gradient(90deg, #e67e22, #d35400); }
+        .progress-fill.medium { background: linear-gradient(90deg, #f39c12, #f1c40f); }
+        .progress-fill.low { background: linear-gradient(90deg, #27ae60, #2ecc71); }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Slider */
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 120px;
+            height: 6px;
+            border-radius: 3px;
+            background: #d4e5d8;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #56ab2f, #a8e063);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(86, 171, 47, 0.4);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #56ab2f, #a8e063);
+            cursor: pointer;
+            border: none;
+        }
+
+        .slider-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 700;
+            color: #1e3c2f;
+            font-size: 1rem;
+            background: #e8f5e9;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+        }
+
+        /* Status indicator */
+        .status-text {
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .status-text.urgent { color: #e74c3c; }
+        .status-text.warning { color: #f39c12; }
+        .status-text.normal { color: #27ae60; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="app-container">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="logo">
+                    <span class="logo-icon">🌳</span>
+                    ArboVision
+                </div>
+                <div class="logo-sub">Gestion du Patrimoine Arboricole</div>
+
+                <nav class="nav-section">
+                    <div class="nav-title">Navigation</div>
+                    <div class="nav-item" :class="{ active: currentPage === 'dashboard' }" @click="currentPage = 'dashboard'">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                        </svg>
+                        Tableau de bord
+                    </div>
+                    <div class="nav-item" :class="{ active: currentPage === 'map' }" @click="currentPage = 'map'">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                        </svg>
+                        Carte interactive
+                    </div>
+                    <div class="nav-item" :class="{ active: currentPage === 'sectors' }" @click="currentPage = 'sectors'">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        </svg>
+                        Analyse Secteurs
+                    </div>
+                    <div class="nav-item" :class="{ active: currentPage === 'works' }" @click="currentPage = 'works'">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        Analyse Travaux
+                    </div>
+                    <div class="nav-item" :class="{ active: currentPage === 'priority' }" @click="currentPage = 'priority'">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        Arbres Prioritaires
+                    </div>
+                </nav>
+
+                <div class="nav-section">
+                    <div class="nav-title">Filtre Global</div>
+                    <div class="filter-group">
+                        <label class="filter-label">Secteur</label>
+                        <div class="styled-select">
+                            <select v-model="selectedSector" @change="refreshData">
+                                <option value="all">Tous les secteurs</option>
+                                <option v-for="s in sectors" :key="s" :value="s">Secteur {{ s }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Dashboard Page -->
+                <div v-if="currentPage === 'dashboard'">
+                    <div class="page-header">
+                        <h1 class="page-title">Tableau de bord</h1>
+                        <p class="page-subtitle">Vue d'ensemble du patrimoine arboricole</p>
+                    </div>
+
+                    <div class="kpi-grid">
+                        <div class="kpi-card green">
+                            <div class="kpi-label">Total Arbres</div>
+                            <div class="kpi-value">{{ formatNumber(kpis.total_arbres) }}</div>
+                        </div>
+                        <div class="kpi-card red">
+                            <div class="kpi-label">Arbres avec Defaut</div>
+                            <div class="kpi-value">{{ formatNumber(kpis.arbres_defaut) }}</div>
+                            <div class="kpi-change">{{ kpis.pct_defaut }}% du total</div>
+                        </div>
+                        <div class="kpi-card orange">
+                            <div class="kpi-label">Score Moyen</div>
+                            <div class="kpi-value">{{ kpis.score_moyen }}</div>
+                        </div>
+                        <div class="kpi-card blue">
+                            <div class="kpi-label">Cas Urgents</div>
+                            <div class="kpi-value">{{ formatNumber(kpis.cas_urgents) }}</div>
+                            <div class="kpi-change">Score >= 4</div>
+                        </div>
+                        <div class="kpi-card purple">
+                            <div class="kpi-label">Secteurs</div>
+                            <div class="kpi-value">{{ kpis.nb_secteurs }}</div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Score moyen par secteur</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="sectorScoreChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Repartition des defauts par secteur</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="sectorDefectChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Repartition des travaux</span>
+                            <div class="slider-container" style="width: 220px;">
+                                <label style="font-size: 0.85rem; color: #6b8f7a;">Top</label>
+                                <input type="range" class="slider" v-model="workLimit" min="5" max="15" @change="loadWorkStats">
+                                <span class="slider-value">{{ workLimit }}</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container" style="height: 350px;">
+                                <canvas id="workChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map Page -->
+                <div v-if="currentPage === 'map'">
+                    <div class="page-header">
+                        <h1 class="page-title">Carte interactive</h1>
+                        <p class="page-subtitle">Localisation des arbres et leur niveau d'urgence</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Carte des arbres</span>
+                            <div class="inline-controls">
+                                <div class="control-group">
+                                    <label>Nombre max:</label>
+                                    <input type="number" class="control-input" v-model.number="mapLimit" min="100" max="5000" step="100" @change="loadMapData">
+                                </div>
+                                <div class="control-group">
+                                    <label>Score min:</label>
+                                    <select class="control-select" v-model.number="mapMinScore" @change="loadMapData">
+                                        <option value="0">Tous</option>
+                                        <option value="1">1+</option>
+                                        <option value="2">2+</option>
+                                        <option value="3">3+</option>
+                                        <option value="4">4+ (Urgents)</option>
+                                        <option value="5">5+ (Critiques)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="map"></div>
+                            <div class="legend">
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: #c0392b;"></div>
+                                    <span>Critique (5-6)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: #e67e22;"></div>
+                                    <span>Eleve (4)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: #f1c40f;"></div>
+                                    <span>Modere (3)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: #27ae60;"></div>
+                                    <span>Faible (2)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: #3498db;"></div>
+                                    <span>Normal (0-1)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sectors Page -->
+                <div v-if="currentPage === 'sectors'">
+                    <div class="page-header">
+                        <h1 class="page-title">Analyse par secteur</h1>
+                        <p class="page-subtitle">Comparaison des indicateurs entre secteurs</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Tableau recapitulatif</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Secteur</th>
+                                            <th>Nb Arbres</th>
+                                            <th>% Defaut</th>
+                                            <th>Score Moyen</th>
+                                            <th>Age Moyen</th>
+                                            <th>Statut</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="sector in sectorStats" :key="sector.ADR_SECTEUR">
+                                            <td><strong>Secteur {{ sector.ADR_SECTEUR }}</strong></td>
+                                            <td>{{ formatNumber(sector.nb_arbres) }}</td>
+                                            <td>
+                                                <div style="display: flex; align-items: center; gap: 10px;">
+                                                    <div class="progress-bar" style="width: 80px;">
+                                                        <div class="progress-fill" :class="getProgressClass(sector.pct_defaut)" :style="{ width: sector.pct_defaut + '%' }"></div>
+                                                    </div>
+                                                    <span>{{ sector.pct_defaut }}%</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="score-badge" :class="getScoreClass(sector.score_moy)">
+                                                    {{ sector.score_moy }}
+                                                </span>
+                                            </td>
+                                            <td>{{ sector.age_moy }} ans</td>
+                                            <td>
+                                                <span class="status-text" :class="getStatusClass(sector.score_moy)">
+                                                    {{ getStatusText(sector.score_moy) }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Score moyen par secteur</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="sectorBarChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Taux de defaut par secteur</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="sectorDefectBarChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Works Page -->
+                <div v-if="currentPage === 'works'">
+                    <div class="page-header">
+                        <h1 class="page-title">Analyse des travaux</h1>
+                        <p class="page-subtitle">Types de travaux et leur correlation avec l'urgence</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Tous les travaux par frequence</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Type de Travaux</th>
+                                            <th>Nombre</th>
+                                            <th>Score Moyen</th>
+                                            <th>% Defaut</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="work in workPageStats" :key="work.TRAVAUXPRECONISESDIAG">
+                                            <td>{{ work.TRAVAUXPRECONISESDIAG }}</td>
+                                            <td>{{ formatNumber(work.nb) }}</td>
+                                            <td>
+                                                <span class="score-badge" :class="getScoreClass(work.score_moy)">
+                                                    {{ work.score_moy }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div style="display: flex; align-items: center; gap: 10px;">
+                                                    <div class="progress-bar" style="width: 80px;">
+                                                        <div class="progress-fill" :class="getProgressClass(work.pct_defaut)" :style="{ width: Math.min(work.pct_defaut, 100) + '%' }"></div>
+                                                    </div>
+                                                    <span>{{ work.pct_defaut }}%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Comparaison Global vs Cas Urgents (Top 10%)</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container" style="height: 350px;">
+                                <canvas id="comparisonChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Priority Page -->
+                <div v-if="currentPage === 'priority'">
+                    <div class="page-header">
+                        <h1 class="page-title">Arbres Prioritaires</h1>
+                        <p class="page-subtitle">Liste des arbres necessitant une intervention urgente</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Arbres avec le plus haut score d'urgence</span>
+                            <div class="inline-controls">
+                                <div class="control-group">
+                                    <label>Secteur:</label>
+                                    <select class="control-select" v-model="prioritySector" @change="loadPriorityTrees">
+                                        <option value="all">Tous</option>
+                                        <option v-for="s in sectors" :key="s" :value="s">Secteur {{ s }}</option>
+                                    </select>
+                                </div>
+                                <div class="slider-container" style="width: 200px;">
+                                    <label style="font-size: 0.85rem; color: #6b8f7a;">Top</label>
+                                    <input type="range" class="slider" v-model="priorityLimit" min="10" max="100" step="10" @change="loadPriorityTrees">
+                                    <span class="slider-value">{{ priorityLimit }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Score</th>
+                                            <th>Secteur</th>
+                                            <th>Genre</th>
+                                            <th>Espece</th>
+                                            <th>Age</th>
+                                            <th>Defaut</th>
+                                            <th>Nb Loc.</th>
+                                            <th>Travaux Preconises</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(tree, index) in priorityTrees" :key="index">
+                                            <td>
+                                                <span class="score-badge" :class="getScoreClassInt(tree.SCORE_URGENCE)">
+                                                    {{ tree.SCORE_URGENCE }}
+                                                </span>
+                                            </td>
+                                            <td>{{ tree.ADR_SECTEUR }}</td>
+                                            <td>{{ tree.GENRE_BOTA }}</td>
+                                            <td><em>{{ tree.ESPECE }}</em></td>
+                                            <td>{{ tree.AGE_ESTIME }} ans</td>
+                                            <td>
+                                                <span :style="{ color: tree.DEFAUT === 1 ? '#e74c3c' : '#27ae60', fontWeight: 600 }">
+                                                    {{ tree.DEFAUT === 1 ? 'Oui' : 'Non' }}
+                                                </span>
+                                            </td>
+                                            <td>{{ tree.NB_LOCALISATIONS_DEFAUT }}</td>
+                                            <td>{{ tree.TRAVAUXPRECONISESDIAG || '-' }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, watch, nextTick } = Vue;
+
+        const API_URL = 'http://localhost:5000/api';
+
+        createApp({
+            setup() {
+                const currentPage = ref('dashboard');
+                const selectedSector = ref('all');
+                const sectors = ref([]);
+                const kpis = ref({
+                    total_arbres: 0,
+                    arbres_defaut: 0,
+                    pct_defaut: 0,
+                    score_moyen: 0,
+                    cas_urgents: 0,
+                    nb_secteurs: 0
+                });
+                const sectorStats = ref([]);
+                const workStats = ref([]);
+                const workPageStats = ref([]);
+                const priorityTrees = ref([]);
+                const comparison = ref([]);
+                const mapData = ref([]);
+
+                const workLimit = ref(10);
+                const priorityLimit = ref(20);
+                const prioritySector = ref('all');
+                const mapLimit = ref(1000);
+                const mapMinScore = ref(0);
+
+                let map = null;
+                let markerCluster = null;
+                let charts = {};
+
+                const formatNumber = (num) => {
+                    if (num === undefined || num === null) return '0';
+                    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+                };
+
+                const getScoreClass = (score) => {
+                    if (score >= 4) return 'score-critical';
+                    if (score >= 3) return 'score-high';
+                    if (score >= 2) return 'score-medium';
+                    if (score >= 1) return 'score-low';
+                    return 'score-normal';
+                };
+
+                const getScoreClassInt = (score) => {
+                    if (score >= 5) return 'score-critical';
+                    if (score >= 4) return 'score-high';
+                    if (score >= 3) return 'score-medium';
+                    if (score >= 2) return 'score-low';
+                    return 'score-normal';
+                };
+
+                const getProgressClass = (pct) => {
+                    if (pct >= 40) return 'critical';
+                    if (pct >= 30) return 'high';
+                    if (pct >= 20) return 'medium';
+                    return 'low';
+                };
+
+                const getStatusClass = (score) => {
+                    if (score >= 1.8) return 'urgent';
+                    if (score >= 1.4) return 'warning';
+                    return 'normal';
+                };
+
+                const getStatusText = (score) => {
+                    if (score >= 1.8) return 'Prioritaire';
+                    if (score >= 1.4) return 'A surveiller';
+                    return 'Normal';
+                };
+
+                const getMarkerColor = (score) => {
+                    if (score >= 5) return '#c0392b';
+                    if (score >= 4) return '#e67e22';
+                    if (score >= 3) return '#f1c40f';
+                    if (score >= 2) return '#27ae60';
+                    return '#3498db';
+                };
+
+                // API calls
+                const loadKpis = async () => {
+                    try {
+                        const res = await fetch(`${API_URL}/kpis?sector=${selectedSector.value}`);
+                        kpis.value = await res.json();
+                    } catch (e) {
+                        console.error('Error loading KPIs:', e);
+                    }
+                };
+
+                const loadSectors = async () => {
+                    try {
+                        const res = await fetch(`${API_URL}/sectors`);
+                        sectors.value = await res.json();
+                    } catch (e) {
+                        console.error('Error loading sectors:', e);
+                    }
+                };
+
+                const loadSectorStats = async () => {
+                    try {
+                        const res = await fetch(`${API_URL}/sector-stats`);
+                        sectorStats.value = await res.json();
+                    } catch (e) {
+                        console.error('Error loading sector stats:', e);
+                    }
+                };
+
+                const loadWorkStats = async () => {
+                    try {
+                        const res = await fetch(`${API_URL}/work-stats?limit=${workLimit.value}`);
+                        workStats.value = await res.json();
+                        updateWorkChart();
+                    } catch (e) {
+                        console.error('Error loading work stats:', e);
+                    }
+                };
+
+                const loadWorkPageStats = async () => {
+                    try {
+                        const res = await fetch(`${API_URL}/work-stats`);
+                        workPageStats.value = await res.json();
+                    } catch (e) {
+                        console.error('Error loading work page stats:', e);
+                    }
+                };
+
+                const loadPriorityTrees = async () => {
+                    try {
+                        const res = await fetch(`${API_URL}/priority-trees?limit=${priorityLimit.value}&sector=${prioritySector.value}`);
+                        priorityTrees.value = await res.json();
+                    } catch (e) {
+                        console.error('Error loading priority trees:', e);
+                    }
+                };
+
+                const loadMapData = async () => {
+                    try {
+                        const res = await fetch(`${API_URL}/map-data?limit=${mapLimit.value}&min_score=${mapMinScore.value}&sector=${selectedSector.value}`);
+                        mapData.value = await res.json();
+                        updateMap();
+                    } catch (e) {
+                        console.error('Error loading map data:', e);
+                    }
+                };
+
+                const loadComparison = async () => {
+                    try {
+                        const res = await fetch(`${API_URL}/comparison`);
+                        comparison.value = await res.json();
+                        updateComparisonChart();
+                    } catch (e) {
+                        console.error('Error loading comparison:', e);
+                    }
+                };
+
+                const refreshData = () => {
+                    loadKpis();
+                    loadPriorityTrees();
+                    if (map) {
+                        loadMapData();
+                    }
+                };
+
+                // Charts
+                const initCharts = () => {
+                    // Destroy existing charts first
+                    if (charts.sectorScore) {
+                        charts.sectorScore.destroy();
+                        charts.sectorScore = null;
+                    }
+                    if (charts.sectorDefect) {
+                        charts.sectorDefect.destroy();
+                        charts.sectorDefect = null;
+                    }
+                    if (charts.work) {
+                        charts.work.destroy();
+                        charts.work = null;
+                    }
+
+                    const ctx1 = document.getElementById('sectorScoreChart');
+                    if (ctx1) {
+                        charts.sectorScore = new Chart(ctx1, {
+                            type: 'bar',
+                            data: {
+                                labels: [],
+                                datasets: [{
+                                    label: 'Score moyen',
+                                    data: [],
+                                    backgroundColor: [],
+                                    borderRadius: 6
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                indexAxis: 'y',
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { grid: { color: '#eef2ef' }, ticks: { color: '#6b8f7a' } },
+                                    y: { grid: { display: false }, ticks: { color: '#1e3c2f', font: { weight: 500 } } }
+                                }
+                            }
+                        });
+                    }
+
+                    const ctx2 = document.getElementById('sectorDefectChart');
+                    if (ctx2) {
+                        charts.sectorDefect = new Chart(ctx2, {
+                            type: 'doughnut',
+                            data: {
+                                labels: [],
+                                datasets: [{
+                                    data: [],
+                                    backgroundColor: ['#e74c3c', '#e67e22', '#f1c40f', '#27ae60', '#3498db', '#9b59b6'],
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'right', labels: { color: '#1e3c2f', padding: 15 } }
+                                }
+                            }
+                        });
+                    }
+
+                    const ctx3 = document.getElementById('workChart');
+                    if (ctx3) {
+                        charts.work = new Chart(ctx3, {
+                            type: 'bar',
+                            data: {
+                                labels: [],
+                                datasets: [{
+                                    label: 'Nombre',
+                                    data: [],
+                                    backgroundColor: '#27ae60',
+                                    borderRadius: 6
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                indexAxis: 'y',
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { grid: { color: '#eef2ef' }, ticks: { color: '#6b8f7a' } },
+                                    y: { grid: { display: false }, ticks: { color: '#1e3c2f', font: { size: 11 } } }
+                                }
+                            }
+                        });
+                    }
+                };
+
+                const initSectorCharts = () => {
+                    // Destroy existing charts first
+                    if (charts.sectorBar) {
+                        charts.sectorBar.destroy();
+                        charts.sectorBar = null;
+                    }
+                    if (charts.sectorDefectBar) {
+                        charts.sectorDefectBar.destroy();
+                        charts.sectorDefectBar = null;
+                    }
+
+                    const ctx1 = document.getElementById('sectorBarChart');
+                    if (ctx1 && sectorStats.value.length) {
+                        charts.sectorBar = new Chart(ctx1, {
+                            type: 'bar',
+                            data: {
+                                labels: sectorStats.value.map(s => `Secteur ${s.ADR_SECTEUR}`),
+                                datasets: [{
+                                    label: 'Score moyen',
+                                    data: sectorStats.value.map(s => s.score_moy),
+                                    backgroundColor: sectorStats.value.map(s => {
+                                        if (s.score_moy >= 1.8) return '#e74c3c';
+                                        if (s.score_moy >= 1.4) return '#f39c12';
+                                        return '#27ae60';
+                                    }),
+                                    borderRadius: 6
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { grid: { color: '#eef2ef' }, ticks: { color: '#1e3c2f' } },
+                                    y: { grid: { color: '#eef2ef' }, ticks: { color: '#6b8f7a' } }
+                                }
+                            }
+                        });
+                    }
+
+                    const ctx2 = document.getElementById('sectorDefectBarChart');
+                    if (ctx2 && sectorStats.value.length) {
+                        charts.sectorDefectBar = new Chart(ctx2, {
+                            type: 'bar',
+                            data: {
+                                labels: sectorStats.value.map(s => `Secteur ${s.ADR_SECTEUR}`),
+                                datasets: [{
+                                    label: '% Defaut',
+                                    data: sectorStats.value.map(s => s.pct_defaut),
+                                    backgroundColor: sectorStats.value.map(s => {
+                                        if (s.pct_defaut >= 40) return '#e74c3c';
+                                        if (s.pct_defaut >= 30) return '#e67e22';
+                                        if (s.pct_defaut >= 20) return '#f39c12';
+                                        return '#27ae60';
+                                    }),
+                                    borderRadius: 6
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { grid: { color: '#eef2ef' }, ticks: { color: '#1e3c2f' } },
+                                    y: { grid: { color: '#eef2ef' }, ticks: { color: '#6b8f7a' } }
+                                }
+                            }
+                        });
+                    }
+                };
+
+                const updateComparisonChart = () => {
+                    const ctx = document.getElementById('comparisonChart');
+                    if (!ctx) return;
+
+                    if (charts.comparison) {
+                        charts.comparison.destroy();
+                    }
+
+                    charts.comparison = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: comparison.value.map(c => c.travaux),
+                            datasets: [
+                                {
+                                    label: 'Global (%)',
+                                    data: comparison.value.map(c => c.global_pct),
+                                    backgroundColor: '#3498db',
+                                    borderRadius: 4
+                                },
+                                {
+                                    label: 'Top 10% Urgents (%)',
+                                    data: comparison.value.map(c => c.urgent_pct),
+                                    backgroundColor: '#e74c3c',
+                                    borderRadius: 4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y',
+                            plugins: { legend: { labels: { color: '#1e3c2f' } } },
+                            scales: {
+                                x: { grid: { color: '#eef2ef' }, ticks: { color: '#6b8f7a' } },
+                                y: { grid: { display: false }, ticks: { color: '#1e3c2f', font: { size: 10 } } }
+                            }
+                        }
+                    });
+                };
+
+                const updateDashboardCharts = () => {
+                    if (charts.sectorScore && sectorStats.value.length) {
+                        const sorted = [...sectorStats.value].sort((a, b) => a.score_moy - b.score_moy);
+                        charts.sectorScore.data.labels = sorted.map(s => `Secteur ${s.ADR_SECTEUR}`);
+                        charts.sectorScore.data.datasets[0].data = sorted.map(s => s.score_moy);
+                        charts.sectorScore.data.datasets[0].backgroundColor = sorted.map(s => {
+                            if (s.score_moy >= 1.8) return '#e74c3c';
+                            if (s.score_moy >= 1.4) return '#f39c12';
+                            return '#27ae60';
+                        });
+                        charts.sectorScore.update();
+                    }
+
+                    if (charts.sectorDefect && sectorStats.value.length) {
+                        charts.sectorDefect.data.labels = sectorStats.value.map(s => `Secteur ${s.ADR_SECTEUR} (${s.pct_defaut}%)`);
+                        charts.sectorDefect.data.datasets[0].data = sectorStats.value.map(s => s.pct_defaut);
+                        charts.sectorDefect.update();
+                    }
+                };
+
+                const updateWorkChart = () => {
+                    if (charts.work && workStats.value.length) {
+                        const sorted = [...workStats.value].sort((a, b) => a.nb - b.nb);
+                        charts.work.data.labels = sorted.map(w => w.TRAVAUXPRECONISESDIAG);
+                        charts.work.data.datasets[0].data = sorted.map(w => w.nb);
+                        charts.work.data.datasets[0].backgroundColor = sorted.map(w => {
+                            if (w.score_moy >= 4) return '#e74c3c';
+                            if (w.score_moy >= 3) return '#e67e22';
+                            if (w.score_moy >= 2) return '#f39c12';
+                            return '#27ae60';
+                        });
+                        charts.work.update();
+                    }
+                };
+
+                // Map - Fixed version
+                const initMap = () => {
+                    // Destroy existing map if any
+                    if (map) {
+                        map.remove();
+                        map = null;
+                        markerCluster = null;
+                    }
+
+                    map = L.map('map').setView([45.18, 5.72], 12);
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap contributors',
+                        maxZoom: 19
+                    }).addTo(map);
+
+                    markerCluster = L.markerClusterGroup({
+                        maxClusterRadius: 50,
+                        spiderfyOnMaxZoom: true,
+                        showCoverageOnHover: false,
+                        zoomToBoundsOnClick: true
+                    });
+
+                    map.addLayer(markerCluster);
+
+                    // Force map to recalculate size
+                    setTimeout(() => {
+                        map.invalidateSize();
+                    }, 100);
+                };
+
+                const updateMap = () => {
+                    if (!map || !markerCluster) return;
+
+                    markerCluster.clearLayers();
+
+                    mapData.value.forEach(tree => {
+                        if (tree.lat && tree.lon) {
+                            const color = getMarkerColor(tree.SCORE_URGENCE);
+                            const marker = L.circleMarker([tree.lat, tree.lon], {
+                                radius: 7,
+                                fillColor: color,
+                                color: '#fff',
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.85
+                            });
+
+                            marker.bindPopup(`
+                                <div style="font-family: Poppins, sans-serif; min-width: 180px;">
+                                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #1e3c2f;">
+                                        Score: <span style="color: ${color};">${tree.SCORE_URGENCE}</span>
+                                    </div>
+                                    <div style="font-size: 12px; color: #555; line-height: 1.6;">
+                                        <strong>Secteur:</strong> ${tree.ADR_SECTEUR}<br>
+                                        <strong>Genre:</strong> ${tree.GENRE_BOTA}<br>
+                                        <strong>Espece:</strong> ${tree.ESPECE}<br>
+                                        <strong>Age:</strong> ${tree.AGE_ESTIME} ans<br>
+                                        <strong>Travaux:</strong> ${tree.TRAVAUXPRECONISESDIAG || '-'}
+                                    </div>
+                                </div>
+                            `);
+
+                            markerCluster.addLayer(marker);
+                        }
+                    });
+
+                    // Fit bounds if we have data
+                    if (mapData.value.length > 0) {
+                        const bounds = markerCluster.getBounds();
+                        if (bounds.isValid()) {
+                            map.fitBounds(bounds, { padding: [20, 20] });
+                        }
+                    }
+                };
+
+                // Watchers
+                watch(currentPage, async (newPage) => {
+                    await nextTick();
+
+                    if (newPage === 'dashboard') {
+                        setTimeout(() => {
+                            initCharts();
+                            updateDashboardCharts();
+                            updateWorkChart();
+                        }, 100);
+                    } else if (newPage === 'map') {
+                        setTimeout(() => {
+                            initMap();
+                            loadMapData();
+                        }, 150);
+                    } else if (newPage === 'sectors') {
+                        setTimeout(() => {
+                            initSectorCharts();
+                        }, 100);
+                    } else if (newPage === 'works') {
+                        loadWorkPageStats();
+                        loadComparison();
+                    } else if (newPage === 'priority') {
+                        loadPriorityTrees();
+                    }
+                });
+
+                // Init
+                onMounted(async () => {
+                    await loadSectors();
+                    await loadKpis();
+                    await loadSectorStats();
+                    await loadWorkStats();
+
+                    setTimeout(() => {
+                        initCharts();
+                        updateDashboardCharts();
+                        updateWorkChart();
+                    }, 200);
+                });
+
+                return {
+                    currentPage,
+                    selectedSector,
+                    sectors,
+                    kpis,
+                    sectorStats,
+                    workStats,
+                    workPageStats,
+                    priorityTrees,
+                    comparison,
+                    workLimit,
+                    priorityLimit,
+                    prioritySector,
+                    mapLimit,
+                    mapMinScore,
+                    formatNumber,
+                    getScoreClass,
+                    getScoreClassInt,
+                    getProgressClass,
+                    getStatusClass,
+                    getStatusText,
+                    refreshData,
+                    loadWorkStats,
+                    loadPriorityTrees,
+                    loadMapData
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
